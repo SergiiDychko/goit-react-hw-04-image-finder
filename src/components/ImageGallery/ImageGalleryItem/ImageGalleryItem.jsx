@@ -1,8 +1,9 @@
 import PropTypes from 'prop-types';
 import { StyledImageGalleryItem } from './ImageGalleryItemStyles';
 
-const ImageGalleryItem = ({ item, openModal }) => {
-const { webformatURL, id, tags } = item;
+export default function ImageGalleryItem({ item, openModal }) {
+
+  const { webformatURL, id, tags } = item;
 
   return (
     <StyledImageGalleryItem>
@@ -24,5 +25,3 @@ ImageGalleryItem.propTypes = {
   }).isRequired,
   openModal: PropTypes.func.isRequired,
 };
-
-export default ImageGalleryItem;

@@ -1,7 +1,6 @@
 import PropTypes from 'prop-types';
-import { Component } from 'react';
+import { useEffect, useState } from 'react';
 import { Notify } from 'notiflix';
-
 import { StyledImageGallery } from './ImageGalleryStyles';
 import ImageGalleryItem from './ImageGalleryItem';
 import Modal from '../Modal';
@@ -9,102 +8,76 @@ import Loader from '../Loader';
 import Button from '../Button';
 import { fetchImages } from '../../utils/fetchApi';
 
-class ImageGallery extends Component {
-  state = {
-    imgStorage: [],
-    modalImageIndex: 0,
-    totalHits: '',
-    page: 1,
-    loading: false,
-    showModal: false,
-  };
+export default function ImageGallery({ query }) {
+  const [imgStorage, setImgStorage] = useState([]);
+  const [modalImageIndex, setModalImageIndex] = useState(0);
+  const [totalHits, setTotalHits] = useState('');
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [showModal, setShowModal] = useState(false);
 
-  componentDidUpdate(prevProps, prevState) {
-    if (prevProps.query !== this.props.query) {
-      this.setState({
-        imgStorage: [],
-        page: 1,
-        loading: true,
-      });
-      fetchImages(this.props.query, this.props.page)
-        .then(images =>
-          this.setState({
-            imgStorage: images.hits,
-            totalHits: images.totalHits,
-          })
-        )
-        .catch(error => console.log('Something went wrong'))
-        .finally(() => this.setState({ loading: false }));
-    }
-    if (this.state.totalHits === 0) {
+  useEffect(() => {
+    if (query === '') { return };
+    setImgStorage([]);
+    setPage(1);
+    setLoading(true);
+    fetchImages(query)
+      .then(images => {
+        setImgStorage(images.hits)
+        setTotalHits(images.totalHits)
+      })
+      .catch(error => console.log('Something went wrong'))
+      .finally(() => setLoading(false));
+    if (totalHits === 0) {
       Notify.info('Your query could not find anything');
-      this.setState({ totalHits: '' });
+      setTotalHits('');
     }
-
-    if ((prevState.page !== this.state.page) & (this.state.page !== 1)) {
-      this.setState({ loading: true });
-      fetchImages(this.props.query, this.state.page)
-        .then(images =>
-          this.setState({
-            imgStorage: [...this.state.imgStorage, ...images.hits],
-          })
-        )
+  }, [query])
+  
+  useEffect(() => {
+    if (page === 1) { return };
+      setLoading(true);
+      fetchImages(query, page)
+        .then(images => {
+          setImgStorage([...imgStorage, ...images.hits]);
+          setTotalHits(images.totalHits);
+        })
         .catch(error => console.log('Something went wrong'))
-        .finally(() => this.setState({ loading: false }));
-    }
-  }
+        .finally(() => setLoading(false));  
+      }, [page])
 
-  handleLoadMore = evt => {
+  const handleLoadMore = evt => {
     evt.preventDefault();
-    this.setState({ page: this.state.page + 1 });
+    setPage(page => page + 1);
+  };
+  const toggleModal = () => setShowModal(showModal => !showModal);
+  const openModal = imageId => {
+    toggleModal();
+    setModalImageIndex(imgStorage.findIndex(image => image.id === imageId));
   };
 
-  toggleModal = () => {
-    this.setState(({ showModal }) => ({
-      showModal: !showModal,
-    }));
-  };
-  openModal = imageId => {
-    const { imgStorage } = this.state;
-    this.toggleModal();
-    this.setState({
-      modalImageIndex: imgStorage.findIndex(image => image.id === imageId),
-    });
-  };
-
-  render() {
-    const { imgStorage, showModal, modalImageIndex, loading, totalHits } =
-      this.state;
-
-    return (
-      <>
-        <StyledImageGallery className="gallery">
-          {imgStorage.map(el => (
-            <ImageGalleryItem
-              key={el.id}
-              item={el}
-              openModal={this.openModal}
-            />
-          ))}
-        </StyledImageGallery>
-        {loading && <Loader />}
-        {imgStorage.length > 0 && imgStorage.length < totalHits && (
-          <Button onClick={this.handleLoadMore}>Load More</Button>
-        )}
-        {showModal && (
-          <Modal
-            gallery={imgStorage}
-            index={modalImageIndex}
-            onClose={this.toggleModal}
-          />
-        )}
-      </>
-    );
-  }
-}
+  return (
+    <>
+      <StyledImageGallery className="gallery">
+        {imgStorage.map(el => (
+          <ImageGalleryItem key={el.id} item={el} openModal={openModal} />
+        ))}
+      </StyledImageGallery>
+      {loading && <Loader />}
+      {imgStorage.length > 0 && imgStorage.length < totalHits && (
+        <Button onClick={handleLoadMore}>Load More</Button>
+      )}
+      {showModal && (
+        <Modal
+          gallery={imgStorage}
+          index={modalImageIndex}
+          onClose={toggleModal}
+        />
+      )}
+    </>
+  );
+};
 
 ImageGallery.propTypes = {
   query: PropTypes.string.isRequired,
 };
-
-export default ImageGallery;

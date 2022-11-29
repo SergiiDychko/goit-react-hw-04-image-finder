@@ -2,79 +2,62 @@ import PropTypes from 'prop-types';
 import { StyledModal } from './ModalStyles';
 import { ReactComponent as Prev } from '../../icons/chevronleft.svg';
 import { ReactComponent as Next } from '../../icons/chevronright.svg';
-import { Component } from 'react';
+import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 
-const modalRoot = document.querySelector('#modal-root')
+const modalRoot = document.querySelector('#modal-root');
 
-class Modal extends Component {
+export default function Modal({ index, gallery, onClose }) {
+  const [imageIndex, setImageIndex] = useState(index);
+  const { tags, largeImageURL } = gallery[imageIndex];
 
-  state = {
-    imageIndex: this.props.index,
-  }
+  useEffect(() => {
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  });
 
-  componentDidMount() {
-    window.addEventListener('keydown', this.handleKeyDown);
-  }
-  componentWillUnmount() {
-    window.removeEventListener('keydown', this.handleKeyDown);
-  }
+  const handleBackdropClose = e => {
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  };
 
-  handleKeyDown = e => {
+  const nextPage = () =>
+    setImageIndex(imageIndex === gallery.length - 1 ? 0 : imageIndex + 1);
+
+  const prevPage = () =>
+    setImageIndex(imageIndex === 0 ? gallery.length - 1 : imageIndex - 1);
+
+  const handleKeyDown = e => {
     if (e.code === 'Escape') {
-      this.props.onClose();
+      onClose();
     }
     if (e.code === 'ArrowRight') {
-      this.nextPage();
+      nextPage();
     }
     if (e.code === 'ArrowLeft') {
-      this.prevPage();
+      prevPage();
     }
   };
 
-  handleBackdropClose = e => {
-    if (e.target === e.currentTarget) {
-      this.props.onClose();
-    }
-  };
-
-  nextPage = () => {
-    const { imageIndex } = this.state;
-    const { gallery } = this.props;
-    this.setState({
-      imageIndex: imageIndex === gallery.length - 1 ? 0 : imageIndex + 1,
-    });
-  };
-  prevPage = () => {
-        const { imageIndex } = this.state;
-        const { gallery } = this.props;
-        this.setState({
-          imageIndex: imageIndex === 0 ? gallery.length - 1 : imageIndex - 1,
-        });
-  };
-
-  render() {
-    const { imageIndex } = this.state;
-    const { gallery } = this.props;
-    const { tags, largeImageURL } = gallery[imageIndex];
-
-    return createPortal(
-      <StyledModal onClick={this.handleBackdropClose}>
-        <div className="modal">
-          <img src={largeImageURL} alt={tags} />
-          <div className="modalBtnsWrap">
-            <button className="modalBtn" type="button" onClick={this.prevPage}>
-              <Prev className="btnIcon" />
-            </button>
-            <button className="modalBtn" type="button" onClick={this.nextPage}>
-              <Next className="btnIcon" />
-            </button>
-          </div>
+  return createPortal(
+    <StyledModal onClick={handleBackdropClose}>
+      <div className="modal">
+        <img src={largeImageURL} alt={tags} />
+        <div className="modalBtnsWrap">
+          <button className="modalBtn" type="button" onClick={prevPage}>
+            <Prev className="btnIcon" />
+          </button>
+          <button className="modalBtn" type="button" onClick={nextPage}>
+            <Next className="btnIcon" />
+          </button>
         </div>
-      </StyledModal>,
-      modalRoot
-    );
-  }
+      </div>
+    </StyledModal>,
+    modalRoot
+  );
 }
 
 Modal.propTypes = {
@@ -87,5 +70,3 @@ Modal.propTypes = {
   index: PropTypes.number.isRequired,
   onClose: PropTypes.func.isRequired,
 };
-
-export default Modal;
